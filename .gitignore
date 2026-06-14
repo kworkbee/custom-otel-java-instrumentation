@@ -1,0 +1,50 @@
+# ==========================================
+# Gradle Build and Cache
+# ==========================================
+.gradle/
+build/
+bin/
+out/
+
+# ==========================================
+# IDEs and Editors
+# ==========================================
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse
+.classpath
+.project
+.settings/
+.metadata/
+
+# ==========================================
+# Operating System files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# Local config and secrets
+# ==========================================
+local.properties
+.env
+.env.local
+.env.*.local
+
+# ==========================================
+# Docker
+# ==========================================
+docker/*.jar
