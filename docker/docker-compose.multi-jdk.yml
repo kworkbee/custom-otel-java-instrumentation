@@ -1,0 +1,72 @@
+# =============================================================================
+# docker-compose.multi-jdk.yml
+#
+# Multi-JDK verification environment for OTel Javaagent extension.
+#
+# Usage:
+#   JDK_VERSION=17 docker compose -f docker/docker-compose.multi-jdk.yml up --build
+#   JDK_VERSION=8  docker compose -f docker/docker-compose.multi-jdk.yml up --build
+#
+# Environment Variables:
+#   JDK_VERSION  - Target JDK version (8, 11, 17, 21, 25). Default: 17
+# =============================================================================
+
+services:
+  # =========================================================================
+  # Application with OTel Javaagent + Custom Extension
+  # Automatically selects the correct Dockerfile based on JDK version.
+  # =========================================================================
+  petclinic:
+    build:
+      context: ..
+      dockerfile: ${DOCKERFILE:-docker/Dockerfile.petclinic}
+      args:
+        JDK_VERSION: ${JDK_VERSION:-17}
+    container_name: petclinic-jdk${JDK_VERSION:-17}
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_SERVICE_NAME=spring-petclinic-jdk${JDK_VERSION:-17}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_METRIC_EXPORT_INTERVAL=5000
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    depends_on:
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  # =========================================================================
+  # OpenTelemetry Collector
+  # =========================================================================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.127.0
+    container_name: otel-collector
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus exporter
+
+  # =========================================================================
+  # Prometheus
+  # =========================================================================
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      otel-collector:
+        condition: service_started

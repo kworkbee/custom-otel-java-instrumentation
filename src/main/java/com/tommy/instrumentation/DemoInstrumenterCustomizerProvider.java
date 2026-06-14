@@ -28,7 +28,9 @@ public class DemoInstrumenterCustomizerProvider implements InstrumenterCustomize
   @Override
   public void customize(InstrumenterCustomizer customizer) {
     String instrumentationName = customizer.getInstrumentationName();
+    System.out.println("[DEMO_EXTENSION] customize called for instrumentation: " + instrumentationName);
     if (isHttpServerInstrumentation(instrumentationName)) {
+      System.out.println("[DEMO_EXTENSION] Matching HTTP instrumentation: " + instrumentationName + ". Adding DemoMetrics.");
       customizer.addOperationMetrics(new DemoMetrics());
     }
   }
@@ -45,6 +47,7 @@ public class DemoInstrumenterCustomizerProvider implements InstrumenterCustomize
   private static class DemoMetrics implements OperationMetrics {
     @Override
     public OperationListener create(Meter meter) {
+      System.out.println("[DEMO_EXTENSION] DemoMetrics create called with Meter.");
       LongCounter requestCounter =
           meter
               .counterBuilder("demo.requests")
@@ -55,6 +58,7 @@ public class DemoInstrumenterCustomizerProvider implements InstrumenterCustomize
       return new OperationListener() {
         @Override
         public Context onStart(Context context, Attributes attributes, long startNanos) {
+          System.out.println("[DEMO_EXTENSION] demo.requests counter incremented onStart!");
           requestCounter.add(1, attributes);
           return context;
         }

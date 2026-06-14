@@ -1,13 +1,15 @@
 # =============================================================================
-# Dockerfile.petclinic - Multi-JDK support (JDK 17, 21, 25)
+# Dockerfile.petclinic-legacy - JDK 8/11 support
+#
+# Uses the lightweight test-app-legacy (Spring Boot 2.7.18) instead of
+# spring-petclinic (which requires JDK 17+).
 #
 # Usage:
-#   docker build --build-arg JDK_VERSION=17 -f docker/Dockerfile.petclinic .
-#   docker build --build-arg JDK_VERSION=21 -f docker/Dockerfile.petclinic .
-#   docker build --build-arg JDK_VERSION=25 -f docker/Dockerfile.petclinic .
+#   docker build --build-arg JDK_VERSION=8  -f docker/Dockerfile.petclinic-legacy .
+#   docker build --build-arg JDK_VERSION=11 -f docker/Dockerfile.petclinic-legacy .
 # =============================================================================
 
-ARG JDK_VERSION=17
+ARG JDK_VERSION=11
 
 # =============================================================================
 # Stage 1: Build the custom OTel extension JAR (always on JDK 17)
@@ -21,31 +23,27 @@ COPY gradlew gradlew
 COPY gradle/ gradle/
 COPY build.gradle.kts settings.gradle.kts gradle.properties ./
 
-# Make gradlew executable
 RUN chmod +x gradlew
 
-# Copy source code
 COPY src/ src/
 
-# Build the extension shadow JAR
 RUN ./gradlew shadowJar --no-daemon
 
 # =============================================================================
-# Stage 2: Build Spring Petclinic (on target JDK)
+# Stage 2: Build the legacy test app (on target JDK)
 # =============================================================================
-FROM eclipse-temurin:${JDK_VERSION}-jdk-jammy AS petclinic-builder
+FROM eclipse-temurin:${JDK_VERSION}-jdk-jammy AS app-builder
 
-WORKDIR /petclinic
+WORKDIR /app
 
-# Copy the local spring-petclinic source
-COPY spring-petclinic/ .
+# Install Maven (Spring Boot 2.7 project)
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
-# Build with Maven, skipping tests and format checks
-RUN chmod +x mvnw && ./mvnw package -DskipTests \
-    -Dcheckstyle.skip=true \
-    -Dspring-javaformat.skip=true \
-    -Dnohttp.skip=true \
-    --no-transfer-progress
+# Copy legacy test app source
+COPY test-app-legacy/ .
+
+# Build the legacy app
+RUN mvn package -DskipTests --no-transfer-progress
 
 # =============================================================================
 # Stage 3: Runtime image
@@ -57,8 +55,8 @@ WORKDIR /app
 # Download OTel Javaagent
 ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 
-# Copy Petclinic JAR from builder
-COPY --from=petclinic-builder /petclinic/target/*.jar /app/petclinic.jar
+# Copy app JAR from builder
+COPY --from=app-builder /app/target/*.jar /app/test-app.jar
 
 # Copy custom extension JAR from builder
 COPY --from=extension-builder /extension/build/libs/*-all.jar /app/extensions/custom-extension.jar
@@ -76,4 +74,4 @@ ENV OTEL_JAVAAGENT_DEBUG="true"
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/petclinic.jar"]
+ENTRYPOINT ["java", "-jar", "/app/test-app.jar"]

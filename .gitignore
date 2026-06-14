@@ -48,3 +48,9 @@ local.properties
 # Docker
 # ==========================================
 docker/*.jar
+
+# ==========================================
+# Maven (test-app-legacy)
+# ==========================================
+test-app-legacy/target/
+spring-petclinic/target/

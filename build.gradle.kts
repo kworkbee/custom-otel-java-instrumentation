@@ -9,9 +9,9 @@ group = "com.tommy.instrumentation"
 version = "1.0"
 
 val versions = mapOf(
-  "opentelemetrySdk" to "1.63.0",
-  "opentelemetryJavaagent" to "2.29.0-SNAPSHOT",
-  "opentelemetryJavaagentAlpha" to "2.29.0-alpha-SNAPSHOT"
+  "opentelemetrySdk" to "1.62.0",
+  "opentelemetryJavaagent" to "2.28.1",
+  "opentelemetryJavaagentAlpha" to "2.28.1-alpha"
 )
 
 repositories {
